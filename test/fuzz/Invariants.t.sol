@@ -22,7 +22,7 @@ contract InvariantsTest is StdInvariant, Test {
     function setUp() external {
         deployer = new DeployDSC();
         (dsc, dsce, config) = deployer.run();
-        (,,weth, wbtc, ) = config.activeNetworkConfig();
+        (,, weth, wbtc,) = config.activeNetworkConfig();
 
         handler = new Handler(dsce, dsc);
         targetContract(address(handler));
@@ -41,33 +41,31 @@ contract InvariantsTest is StdInvariant, Test {
         console.log("wbtcValue: ", wbtcValue);
         console.log("Times Mint Called: ", handler.timesMintIsCalled());
 
-
         assert(wethValue + wbtcValue >= totalSupply);
     }
 
     // Invariants.t.sol
-function invariant_gettersMustNotRevert() public view {
-    // 1. Per-user getters across every actor that ever deposited
-    address[] memory users = handler.getUsersWithCollateralDeposited();
-    for (uint256 i = 0; i < users.length; i++) {
-        dsce.getHealthFactor(users[i]);
-        dsce.getAccountCollateralValue(users[i]);
+    function invariant_gettersMustNotRevert() public view {
+        // 1. Per-user getters across every actor that ever deposited
+        address[] memory users = handler.getUsersWithCollateralDeposited();
+        for (uint256 i = 0; i < users.length; i++) {
+            dsce.getHealthFactor(users[i]);
+            dsce.getAccountCollateralValue(users[i]);
+        }
+
+        // 2. Also check a fresh address: no deposits, no debt
+        dsce.getHealthFactor(address(0xdead));
+        dsce.getAccountCollateralValue(address(0xdead));
+
+        // 3. Token/USD conversions on allowed collateral only
+        dsce.getUsdValue(weth, 1 ether);
+        dsce.getUsdValue(wbtc, 1 ether);
+        dsce.getTokenAmountFromUsd(weth, 100 ether);
+        dsce.getTokenAmountFromUsd(wbtc, 100 ether);
+
+        // 4. The DSC token's own surface
+        dsc.totalSupply();
+        dsc.balanceOf(address(dsce));
+        dsc.decimals();
     }
-
-    // 2. Also check a fresh address: no deposits, no debt
-    dsce.getHealthFactor(address(0xdead));
-    dsce.getAccountCollateralValue(address(0xdead));
-
-    // 3. Token/USD conversions on allowed collateral only
-    dsce.getUsdValue(weth, 1 ether);
-    dsce.getUsdValue(wbtc, 1 ether);
-    dsce.getTokenAmountFromUsd(weth, 100 ether);
-    dsce.getTokenAmountFromUsd(wbtc, 100 ether);
-
-    // 4. The DSC token's own surface
-    dsc.totalSupply();
-    dsc.balanceOf(address(dsce));
-    dsc.decimals();
-}
-
 }
